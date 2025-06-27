@@ -28,6 +28,6 @@ Aplikasi Flutter untuk mencatat suasana hati harian pengguna dengan fitur lengka
   2. flutter run / Run dari VSCode (Chrome / Android Emulator)
  
 == DUMMY ACCOUNT ==
-email -> itelkucing090@gmail.com
+email -> itelikan090@gmail.com
 password -> user123
 ===================
