@@ -6,7 +6,11 @@ class MoodOption {
   final String label;
   final Color color;
 
-  MoodOption({required this.emoji, required this.label, required this.color});
+  const MoodOption({
+    required this.emoji,
+    required this.label,
+    required this.color,
+  });
 }
 
 class AddMoodScreen extends StatefulWidget {
@@ -17,21 +21,21 @@ class AddMoodScreen extends StatefulWidget {
 }
 
 class _AddMoodScreenState extends State<AddMoodScreen> {
-  final List<MoodOption> _moodOptions = [
+  final _noteController = TextEditingController();
+  MoodOption? _selectedMood;
+  bool _isLoading = false;
+
+  static const List<MoodOption> _moodOptions = [
     MoodOption(emoji: '😊', label: 'Happy', color: Colors.yellow),
     MoodOption(emoji: '😔', label: 'Sad', color: Colors.blue),
     MoodOption(emoji: '😡', label: 'Angry', color: Colors.red),
     MoodOption(emoji: '😰', label: 'Anxious', color: Colors.orange),
     MoodOption(emoji: '😴', label: 'Tired', color: Colors.purple),
-    MoodOption(emoji: '🤔', label: 'Thoughtful', color: Colors.teal),
-    MoodOption(emoji: '😌', label: 'Calm', color: Colors.green),
-    MoodOption(emoji: '😍', label: 'Excited', color: Colors.pink),
-    MoodOption(emoji: '😐', label: 'Neutral', color: Colors.grey),
+    MoodOption(emoji: '🤔', label: 'Confused', color: Colors.brown),
+    MoodOption(emoji: '😍', label: 'Loved', color: Colors.pink),
+    MoodOption(emoji: '😎', label: 'Cool', color: Colors.teal),
+    MoodOption(emoji: '🤗', label: 'Grateful', color: Colors.green),
   ];
-
-  MoodOption? _selectedMood;
-  final _noteController = TextEditingController();
-  bool _isLoading = false;
 
   @override
   void dispose() {
@@ -51,26 +55,33 @@ class _AddMoodScreenState extends State<AddMoodScreen> {
 
     try {
       final user = Supabase.instance.client.auth.currentUser;
-      
+      if (user == null) {
+        throw Exception('User not authenticated');
+      }
+
       await Supabase.instance.client.from('mood_entries').insert({
-        'user_id': user!.id,
+        'user_id': user.id,
         'mood_emoji': _selectedMood!.emoji,
         'mood_label': _selectedMood!.label,
         'note': _noteController.text.trim().isEmpty ? null : _noteController.text.trim(),
+        'created_at': DateTime.now().toIso8601String(),
       });
 
       if (mounted) {
-        Navigator.of(context).pop(true);
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Mood saved successfully!')),
         );
+        Navigator.of(context).pop(true); // Return true to indicate success
       }
     } catch (error) {
-      setState(() => _isLoading = false);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Error saving mood: $error')),
         );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
       }
     }
   }
@@ -80,14 +91,110 @@ class _AddMoodScreenState extends State<AddMoodScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Add Mood'),
-        actions: [
-          TextButton(
-            onPressed: _isLoading ? null : _saveMoodEntry,
-            child: _isLoading
-                ? const SizedBox(
-                    width: 20,
-                    height: 20,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                : const Text('Save'),
-          ),
+        centerTitle: true,
+      ),
+      body: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'How are you feeling?',
+              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 20),
+            Expanded(
+              child: GridView.builder(
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 3,
+                  childAspectRatio: 1,
+                  crossAxisSpacing: 12,
+                  mainAxisSpacing: 12,
+                ),
+                itemCount: _moodOptions.length,
+                itemBuilder: (context, index) {
+                  final mood = _moodOptions[index];
+                  final isSelected = _selectedMood == mood;
+                  
+                  return GestureDetector(
+                    onTap: () {
+                      setState(() {
+                        _selectedMood = mood;
+                      });
+                    },
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: isSelected ? mood.color.withOpacity(0.2) : Colors.grey[100],
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(
+                          color: isSelected ? mood.color : Colors.grey[300]!,
+                          width: isSelected ? 3 : 1,
+                        ),
+                      ),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(
+                            mood.emoji,
+                            style: const TextStyle(fontSize: 32),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            mood.label,
+                            style: TextStyle(
+                              fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                              color: isSelected ? mood.color : Colors.black87,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+            const SizedBox(height: 20),
+            Text(
+              'Add a note (optional)',
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _noteController,
+              decoration: const InputDecoration(
+                hintText: 'What made you feel this way?',
+                border: OutlineInputBorder(),
+                contentPadding: EdgeInsets.all(16),
+              ),
+              maxLines: 3,
+              maxLength: 200,
+            ),
+            const SizedBox(height: 20),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: _isLoading ? null : _saveMoodEntry,
+                style: ElevatedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                child: _isLoading
+                    ? const CircularProgressIndicator()
+                    : const Text(
+                        'Save Mood',
+                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                      ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}

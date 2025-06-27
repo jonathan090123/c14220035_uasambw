@@ -21,7 +21,7 @@ class MoodEntry {
 
   factory MoodEntry.fromMap(Map<String, dynamic> map) {
     return MoodEntry(
-      id: map['id'],
+      id: map['id'].toString(),
       moodEmoji: map['mood_emoji'],
       moodLabel: map['mood_label'],
       note: map['note'],
@@ -49,9 +49,15 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _fetchMoodEntries() async {
     try {
+      final user = Supabase.instance.client.auth.currentUser;
+      if (user == null) {
+        throw Exception('User not authenticated');
+      }
+
       final response = await Supabase.instance.client
           .from('mood_entries')
           .select()
+          .eq('user_id', user.id)
           .order('created_at', ascending: false);
 
       setState(() {
@@ -110,6 +116,22 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
+  String _getMoodStats() {
+    if (_moodEntries.isEmpty) return '';
+    
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final todayEntries = _moodEntries.where((entry) {
+      final entryDate = DateTime(entry.createdAt.year, entry.createdAt.month, entry.createdAt.day);
+      return entryDate.isAtSameMomentAs(today);
+    }).length;
+    
+    final thisWeek = now.subtract(const Duration(days: 7));
+    final weekEntries = _moodEntries.where((entry) => entry.createdAt.isAfter(thisWeek)).length;
+    
+    return 'Today: $todayEntries entries • This week: $weekEntries entries';
+  }
+
   @override
   Widget build(BuildContext context) {
     final user = Supabase.instance.client.auth.currentUser;
@@ -131,7 +153,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   children: [
                     const Icon(Icons.logout),
                     const SizedBox(width: 8),
-                    Text('Sign Out'),
+                    const Text('Sign Out'),
                   ],
                 ),
               ),
@@ -149,7 +171,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Hello, ${user?.email ?? 'User'}!',
+                        'Hello, ${user?.email?.split('@')[0] ?? 'User'}!',
                         style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                           fontWeight: FontWeight.bold,
                         ),
@@ -161,6 +183,17 @@ class _HomeScreenState extends State<HomeScreen> {
                           color: Colors.grey[600],
                         ),
                       ),
+                      if (_moodEntries.isNotEmpty)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 8),
+                          child: Text(
+                            _getMoodStats(),
+                            style: TextStyle(
+                              color: Colors.grey[500],
+                              fontSize: 12,
+                            ),
+                          ),
+                        ),
                     ],
                   ),
                 ),
@@ -190,47 +223,55 @@ class _HomeScreenState extends State<HomeScreen> {
                             ],
                           ),
                         )
-                      : ListView.builder(
-                          padding: const EdgeInsets.all(16),
-                          itemCount: _moodEntries.length,
-                          itemBuilder: (context, index) {
-                            final entry = _moodEntries[index];
-                            return Card(
-                              margin: const EdgeInsets.only(bottom: 12),
-                              child: ListTile(
-                                leading: Text(
-                                  entry.moodEmoji,
-                                  style: const TextStyle(fontSize: 32),
-                                ),
-                                title: Text(
-                                  entry.moodLabel,
-                                  style: const TextStyle(fontWeight: FontWeight.bold),
-                                ),
-                                subtitle: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    if (entry.note != null && entry.note!.isNotEmpty)
-                                      Padding(
-                                        padding: const EdgeInsets.only(top: 4),
-                                        child: Text(entry.note!),
+                      : RefreshIndicator(
+                          onRefresh: _fetchMoodEntries,
+                          child: ListView.builder(
+                            padding: const EdgeInsets.all(16),
+                            itemCount: _moodEntries.length,
+                            itemBuilder: (context, index) {
+                              final entry = _moodEntries[index];
+                              return Card(
+                                margin: const EdgeInsets.only(bottom: 12),
+                                elevation: 2,
+                                child: ListTile(
+                                  contentPadding: const EdgeInsets.all(16),
+                                  leading: Text(
+                                    entry.moodEmoji,
+                                    style: const TextStyle(fontSize: 32),
+                                  ),
+                                  title: Text(
+                                    entry.moodLabel,
+                                    style: const TextStyle(fontWeight: FontWeight.bold),
+                                  ),
+                                  subtitle: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      if (entry.note != null && entry.note!.isNotEmpty)
+                                        Padding(
+                                          padding: const EdgeInsets.only(top: 4),
+                                          child: Text(
+                                            entry.note!,
+                                            style: TextStyle(color: Colors.grey[700]),
+                                          ),
+                                        ),
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        DateFormat('MMM dd, yyyy - hh:mm a').format(entry.createdAt),
+                                        style: TextStyle(
+                                          color: Colors.grey[600],
+                                          fontSize: 12,
+                                        ),
                                       ),
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      DateFormat('MMM dd, yyyy - hh:mm a').format(entry.createdAt),
-                                      style: TextStyle(
-                                        color: Colors.grey[600],
-                                        fontSize: 12,
-                                      ),
-                                    ),
-                                  ],
+                                    ],
+                                  ),
+                                  trailing: IconButton(
+                                    icon: Icon(Icons.delete_outline, color: Colors.red[400]),
+                                    onPressed: () => _showDeleteDialog(entry),
+                                  ),
                                 ),
-                                trailing: IconButton(
-                                  icon: Icon(Icons.delete_outline, color: Colors.red[400]),
-                                  onPressed: () => _showDeleteDialog(entry),
-                                ),
-                              ),
-                            );
-                          },
+                              );
+                            },
+                          ),
                         ),
                 ),
               ],
