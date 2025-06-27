@@ -21,7 +21,11 @@ class MoodEntry {
 
   factory MoodEntry.fromMap(Map<String, dynamic> map) {
     return MoodEntry(
+<<<<<<< HEAD
       id: map['id'].toString(),
+=======
+      id: map['id'],
+>>>>>>> 3810d7744425610881516fe56233fb8b3c9d340a
       moodEmoji: map['mood_emoji'],
       moodLabel: map['mood_label'],
       note: map['note'],
@@ -49,6 +53,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _fetchMoodEntries() async {
     try {
+<<<<<<< HEAD
       final user = Supabase.instance.client.auth.currentUser;
       if (user == null) {
         throw Exception('User not authenticated');
@@ -58,6 +63,11 @@ class _HomeScreenState extends State<HomeScreen> {
           .from('mood_entries')
           .select()
           .eq('user_id', user.id)
+=======
+      final response = await Supabase.instance.client
+          .from('mood_entries')
+          .select()
+>>>>>>> 3810d7744425610881516fe56233fb8b3c9d340a
           .order('created_at', ascending: false);
 
       setState(() {
@@ -116,6 +126,7 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
+<<<<<<< HEAD
   String _getMoodStats() {
     if (_moodEntries.isEmpty) return '';
     
@@ -132,6 +143,8 @@ class _HomeScreenState extends State<HomeScreen> {
     return 'Today: $todayEntries entries • This week: $weekEntries entries';
   }
 
+=======
+>>>>>>> 3810d7744425610881516fe56233fb8b3c9d340a
   @override
   Widget build(BuildContext context) {
     final user = Supabase.instance.client.auth.currentUser;
@@ -153,7 +166,11 @@ class _HomeScreenState extends State<HomeScreen> {
                   children: [
                     const Icon(Icons.logout),
                     const SizedBox(width: 8),
+<<<<<<< HEAD
                     const Text('Sign Out'),
+=======
+                    Text('Sign Out'),
+>>>>>>> 3810d7744425610881516fe56233fb8b3c9d340a
                   ],
                 ),
               ),
@@ -171,7 +188,11 @@ class _HomeScreenState extends State<HomeScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
+<<<<<<< HEAD
                         'Hello, ${user?.email?.split('@')[0] ?? 'User'}!',
+=======
+                        'Hello, ${user?.email ?? 'User'}!',
+>>>>>>> 3810d7744425610881516fe56233fb8b3c9d340a
                         style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                           fontWeight: FontWeight.bold,
                         ),
@@ -183,6 +204,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           color: Colors.grey[600],
                         ),
                       ),
+<<<<<<< HEAD
                       if (_moodEntries.isNotEmpty)
                         Padding(
                           padding: const EdgeInsets.only(top: 8),
@@ -194,6 +216,8 @@ class _HomeScreenState extends State<HomeScreen> {
                             ),
                           ),
                         ),
+=======
+>>>>>>> 3810d7744425610881516fe56233fb8b3c9d340a
                     ],
                   ),
                 ),
@@ -223,6 +247,7 @@ class _HomeScreenState extends State<HomeScreen> {
                             ],
                           ),
                         )
+<<<<<<< HEAD
                       : RefreshIndicator(
                           onRefresh: _fetchMoodEntries,
                           child: ListView.builder(
@@ -272,6 +297,49 @@ class _HomeScreenState extends State<HomeScreen> {
                               );
                             },
                           ),
+=======
+                      : ListView.builder(
+                          padding: const EdgeInsets.all(16),
+                          itemCount: _moodEntries.length,
+                          itemBuilder: (context, index) {
+                            final entry = _moodEntries[index];
+                            return Card(
+                              margin: const EdgeInsets.only(bottom: 12),
+                              child: ListTile(
+                                leading: Text(
+                                  entry.moodEmoji,
+                                  style: const TextStyle(fontSize: 32),
+                                ),
+                                title: Text(
+                                  entry.moodLabel,
+                                  style: const TextStyle(fontWeight: FontWeight.bold),
+                                ),
+                                subtitle: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    if (entry.note != null && entry.note!.isNotEmpty)
+                                      Padding(
+                                        padding: const EdgeInsets.only(top: 4),
+                                        child: Text(entry.note!),
+                                      ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      DateFormat('MMM dd, yyyy - hh:mm a').format(entry.createdAt),
+                                      style: TextStyle(
+                                        color: Colors.grey[600],
+                                        fontSize: 12,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                trailing: IconButton(
+                                  icon: Icon(Icons.delete_outline, color: Colors.red[400]),
+                                  onPressed: () => _showDeleteDialog(entry),
+                                ),
+                              ),
+                            );
+                          },
+>>>>>>> 3810d7744425610881516fe56233fb8b3c9d340a
                         ),
                 ),
               ],
