@@ -49,7 +49,7 @@ class _SplashScreenState extends State<SplashScreen> {
 
   Future<void> _checkInitialRoute() async {
     final prefs = await SharedPreferences.getInstance();
-    final isFirstTime = prefs.getBool('is_first_time') ?? false;
+    final isFirstTime = prefs.getBool('is_first_time') ?? true;
     final session = Supabase.instance.client.auth.currentSession;
 
     await Future.delayed(const Duration(seconds: 2));
